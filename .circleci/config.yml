@@ -3,45 +3,51 @@ version: 2.1
 jobs:
   build-and-scan-image:
     docker: 
-      - image: circleci/buildpack-deps:stable
+      - image: docker:dind
     steps:
       - checkout
       - setup_remote_docker
+      - run: 
+          name: Install scanning dependencies
+          command: apk update && apk add -U wget ca-certificates lsof
       - run:
-          name: Build Docker Image
+          name: Build Docker image
           command: docker build -t ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} .
       - run:
-          name: Start Docker Image
+          name: Start Docker image
           command: docker run ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}
       - run:
-          name: Start Container Vulnerability Tooling Images
+          name: Start container vulnerability tooling images
           command: | 
             docker run -d --name db arminc/clair-db:latest
             docker run -p 6060:6060 --link db:postgres -d --name clair --restart on-failure arminc/clair-local-scan:latest
       - run:
-          name: Download Clair Scanning Utility
+          name: Download Clair scanning utility
           command: | 
             wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
             mv clair-scanner_linux_amd64 clair-scanner
             chmod +x clair-scanner
       - run:
-          name: Ensure Vulnerability Whitelist File Exists
+          name: Ensure vulnerability whitelist file exists
           command: touch clair-whitelist.yml
       - run:
-          name: Scan Docker Image for Vulnerabilities
+          name: Scan docker image for vulnerabilities
           command: | 
-            while( ! wget -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 10 && docker ps ; done
+            echo "Waiting for Clair DB to start"
+            lsof
+            #while( ! wget -q -O /dev/null http://localhost:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; done
             retries=0
-            echo "Waiting for clair daemon to start"
-            while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
-            ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r container-scanning-report.json -l clair.log -w clair-whitelist.yml ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} || true
+            echo "Waiting for Clair daemon to be ready for scanning"
+            #while( ! wget -T 10 -q -O /dev/null http://localhost:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
+            sleep 20
+            ./clair-scanner -c http://localhost:6060 --ip $(hostname -i) -r container-scanning-report.json -l clair.log -w clair-whitelist.yml ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} || true
   release-image:
     docker: 
-      - image: circleci/buildpack-deps:stable
+      - image: docker:dind
     steps:
       - setup_remote_docker
       - run:
-          name: Release Approved Docker Image
+          name: Release approved Docker image
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u deanshanahan --password-stdin
             docker tag ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest
