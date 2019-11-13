@@ -46,10 +46,14 @@ jobs:
       - run:
           name: Release approved Docker image
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u deanshanahan --password-stdin
-            docker pull deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest
-            docker tag deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
-            docker push deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
+            if git describe --tags &> /dev/null; then
+              echo "$DOCKERHUB_PASS" | docker login -u deanshanahan --password-stdin
+              docker pull deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest
+              docker tag deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
+              docker push deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
+            else
+              echo "No tagged version to release"
+            fi
 workflows:
   version: 2
   build-master:
