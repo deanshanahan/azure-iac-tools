@@ -54,6 +54,16 @@ jobs:
             else
               echo "No tagged version to release"
             fi
+  update-readme:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - checkout
+      - run:
+          name: Push README.md to Docker Hub
+          command: |
+            TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "{\"username\": \"deanshanahan\", \"password\": \"${DOCKERHUB_PASS}\"}" https://hub.docker.com/v2/users/login/ | jq -r .token)
+            if curl -s --output /dev/null -H "Authorization: JWT ${TOKEN}" -X PATCH --data-urlencode full_description@./README.md "https://hub.docker.com/v2/repositories/deanshanahan/${CIRCLE_PROJECT_REPONAME}/" ; then echo "README.md successfully updated"; else echo "README.md update failed"; fi
 workflows:
   version: 2
   build-master:
