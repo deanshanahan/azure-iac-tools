@@ -38,6 +38,9 @@ jobs:
       - store_artifacts:
           path: ./container-scanning-report.json
           destination: "container-scanning-report-${CIRCLE_SHA1}.json"
+      - persist_to_workspace:
+          root: .
+          paths: ./container-scanning-report.json
       - run:
           name: Push latest image to Docker Hub
           command: |
@@ -65,6 +68,12 @@ jobs:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Add vulnerability report to README.md before sending to Docker Hub
+          command: |
+            ./.circleci/generate_metrics_table.sh ./container-scanning-report.json ./README.md
       - run:
           name: Push README.md to Docker Hub
           command: |
