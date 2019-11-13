@@ -48,8 +48,8 @@ jobs:
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u deanshanahan --password-stdin
             docker pull deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest
-            docker tag deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest deanshanahan/${CIRCLE_PROJECT_REPONAME}:${git describe --tags}
-            docker push deanshanahan/${CIRCLE_PROJECT_REPONAME}:${git describe --tags}
+            docker tag deanshanahan/${CIRCLE_PROJECT_REPONAME}:latest deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
+            docker push deanshanahan/${CIRCLE_PROJECT_REPONAME}:$(git describe --tags)
 workflows:
   version: 2
   build-master:
@@ -58,11 +58,11 @@ workflows:
           filters:
             branches:
               only: master
+            tags:
+              only: /.*/
       - release-image:
           requires:
             - build-and-scan-image
           filters:
-            branches:
-              only: master
             tags:
               only: /.*/
