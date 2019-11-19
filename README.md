@@ -10,5 +10,5 @@ Docker image preinstalled with IaC tools for Azure.
 | Heading | Details |
 | --- | --- |
 | Image Base | Centos 7 |
-| Tools Installed | Azure CLI<br>Terraform<br>Ansible |
+| Tools Installed | Azure CLI<br>Kubernetes<br>Terraform<br>Ansible |
 
